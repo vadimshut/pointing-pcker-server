@@ -1,0 +1,7 @@
+{
+    "port": 5000,
+    "cloudinaryApiKey": "119654312328194",
+    "cloudinaryApiSecretKey": "7Y32K2KuMg6UNqdcow0aiOk9aJY",
+    "cloudinaryApiEnvoriement": "CLOUDINARY_URL=cloudinary://119654312328194:7Y32K2KuMg6UNqdcow0aiOk9aJY@vadimshut",
+    "cloudName": "vadimshut"
+}
