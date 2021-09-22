@@ -4,24 +4,23 @@ const cors = require('cors');
 const socketio = require('socket.io');
 import authRouter from './routes/auth.routes'
 import http from 'http'
-import onConnectionSocket from './controllers/socketControllers';
 import { Socket } from 'socket.io';
+import onConnectionSocket from './controllers/socketControllers';
+
 
 const config = require ('config');
 const PORT = config.get('port') || 443;
 
 const app = express();
 const server = http.createServer(app)
-const io: Socket = socketio(server)
+const io = socketio(server)
+const nsp = io.of('/lobby')
 
 app.use(express.json());
 app.use(cors({origin: '*'}));
 app.use('/api/auth', authRouter);
 
-
-
-
-io.on('connection', onConnectionSocket)
+nsp.on('connection',  onConnectionSocket)
 
 // app.use(cors())
 

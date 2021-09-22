@@ -70,7 +70,7 @@ class AuthControlleres{
             ROOMS_DATA[user.roomId].members.push(user)
         }
 
-        console.log('ROOMS: ', ROOMS_DATA);
+        // console.log('ROOMS: ', ROOMS_DATA);
         console.log('Members: ', ROOMS_DATA[user.roomId].members);
         
         res.status(200).json({...user});        

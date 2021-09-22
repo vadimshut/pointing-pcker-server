@@ -9,4 +9,5 @@ export default interface IUser {
   userId: string
   roomId: string
   authentification?: boolean
+  socketId?: string
 }
