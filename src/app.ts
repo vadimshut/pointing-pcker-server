@@ -14,15 +14,12 @@ const PORT = config.get('port') || 443;
 const app = express();
 const server = http.createServer(app)
 const io = socketio(server)
-const nsp = io.of('/lobby')
+export const nsp = io.of('/lobby')
 
 app.use(express.json());
 app.use(cors({origin: '*'}));
 app.use('/api/auth', authRouter);
-
 nsp.on('connection',  onConnectionSocket)
-
-// app.use(cors())
 
 async function start() {
     // app.listen(process.env.PORT || 3000, () => console.log(`App has been started on port ${process.env.PORT}... `));

@@ -61,7 +61,7 @@ class AuthControlleres{
         
         const user = createNewUser(req)
         if (user.isAdmin) {
-            ROOMS_DATA[user.roomId] = {members: []}
+            ROOMS_DATA[user.roomId] = {members: [], kickResolution: []}
             ROOMS_DATA[user.roomId].members.push(user)
         }
 
@@ -69,10 +69,6 @@ class AuthControlleres{
             if(!Object.keys(ROOMS_DATA).includes(user.roomId)) res.status(500).json({message: 'Entered ID does not exist'});
             ROOMS_DATA[user.roomId].members.push(user)
         }
-
-        // console.log('ROOMS: ', ROOMS_DATA);
-        console.log('Members: ', ROOMS_DATA[user.roomId].members);
-        
         res.status(200).json({...user});        
     }
 }
