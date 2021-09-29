@@ -61,7 +61,7 @@ class AuthControlleres{
         
         const user = createNewUser(req)
         if (user.isAdmin) {
-            ROOMS_DATA[user.roomId] = {members: [], kickResolution: []}
+            ROOMS_DATA[user.roomId] = {members: [], kickResolution: [], issues: [], chat: [], gameSettings: {}}
             ROOMS_DATA[user.roomId].members.push(user)
         }
 

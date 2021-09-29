@@ -2,10 +2,15 @@ import { Socket } from "socket.io";
 import { nsp } from "../app";
 import { ROOMS_DATA } from "../globalConstants";
 import IFindUser from "../interfaces/IFindUser";
+import IGameSettings from "../interfaces/IGameSettings";
+import IIssue from "../interfaces/IIssue";
 import IOpenModalKickPlayer from "../interfaces/IOpenModalKickPlayer";
 import deleteMemberFromRoom from "../utils/deleteMemberFromRoom";
 import findUserInRoom from "../utils/findUserInRoom";
 import findUserInRooms from "../utils/findUserInRooms";
+import getIndexDeleteIssue from "../utils/getIndexDeleteIssue";
+import modifiedIssue from "../utils/modifiedIssue";
+import sendChatMessage from './chatController'
 
 export default function onConnectionSocket(socket: Socket) {
     console.log('New user connection id: ', socket.id);
@@ -21,7 +26,15 @@ export default function onConnectionSocket(socket: Socket) {
      socket.on('resolutionKickMember', (roomId, kickMemberSocketId, kickMemberResolution) => {
          handlerResolutionKickMember(socket, roomId, kickMemberSocketId, kickMemberResolution)
      })
-
+     socket.on('kickMeFromRoom', (roomId) => {handlerKickMeFromRoom(socket, roomId)})
+     socket.on('newIssue', (roomId, issueInstance) => {handlerNewIssue(socket, roomId, issueInstance)})
+     socket.on('deleteIssueCard', (roomId, issueId) => {handdleDeleteIssueCard(socket, roomId, issueId)})
+     socket.on('modifiedIssue', (roomId, issueId) => {handdleModifiedIssueCard(socket, roomId, issueId)})
+     socket.on('sendMessage', (message, roomId, firstName, lastName, jobPossition, image) => {
+        sendChatMessage(socket, message, roomId, firstName, lastName, jobPossition, image)
+     })
+     socket.on('startGame', (roomId, startGame, gameSettings) => {handleStartGame(socket, roomId, startGame, gameSettings)})
+     socket.on('getGameSettings', (roomId) => {handlerSendGameSettings(socket, roomId)})
      socket.on('disconnect', () => handlerDisconnect(socket));
 }
 
@@ -36,15 +49,14 @@ function joinRoom(socket: Socket, roomId: string, userId: string) {
     user.socketId = socket.id
     console.log('new user join to room ', roomId);   
     console.log(ROOMS_DATA[roomId]?.members);
-    const room = nsp.sockets
-    console.log(room.keys());
-    // console.log(room.values());
-    // console.log( nsp.sockets.get(socket.id));
-    // console.log(Object.keys( nsp.sockets.get(socket.id)));
-    // console.log(Object.keys( nsp.sockets.get(socket.id).adapter));
-    // console.log(nsp.sockets.get(socket.id).adapter.rooms);
+    // const room = nsp.sockets
+    // console.log(room.keys());
+}
 
-    // console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
+function handlerKickMeFromRoom(socket: Socket, roomId: string) {
+    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
+    socket.leave(roomId)
+    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
 }
 
 function getMembers(socket: Socket, roomId: string) {
@@ -103,9 +115,7 @@ function handlerResolutionKickMember(
                     members: sendData,
                     kickerMember: kickMemberSocketId
                 })
-                console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
                 // nsp.sockets.get(socket.id).adapter.rooms.get(roomId).delete(kickMemberSocketId)
-                console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
             }
         } else {
             console.log("don't kick this player", premitDisconnect, minCountAccept);
@@ -114,13 +124,42 @@ function handlerResolutionKickMember(
     }    
 }
 
+
+function handlerNewIssue(socket: Socket, roomId: string, issueInstance: IIssue) {
+    console.log('recieve new issue');
+    ROOMS_DATA[roomId].issues.push(issueInstance)
+    const issues = ROOMS_DATA[roomId].issues
+    nsp.to(roomId).emit('issues', {issues: issues})
+}
+
+function handdleDeleteIssueCard(socket: Socket, roomId: string, issueId: string) {
+    const deleteIssue = getIndexDeleteIssue(roomId, issueId)
+    if (deleteIssue === undefined) return;
+    ROOMS_DATA[roomId].issues.splice(deleteIssue.index, 1)
+    const issues = ROOMS_DATA[roomId].issues
+    nsp.to(roomId).emit('issues', {issues: issues})
+}
+
+function handdleModifiedIssueCard(socket: Socket, roomId: string, issueInstance: IIssue) {
+    modifiedIssue(roomId, issueInstance)
+    const issues = ROOMS_DATA[roomId].issues
+    nsp.to(roomId).emit('issues', {issues: issues})
+}
+
+function handleStartGame(socket: Socket, roomId: string, startGame: boolean, gameSettings: IGameSettings) {
+    ROOMS_DATA[roomId].gameSettings = gameSettings
+    nsp.to(roomId).emit('startGameClient', startGame)
+}
+
+function handlerSendGameSettings(socket: Socket, roomId: string) {
+    nsp.to(roomId).emit('setGameSettings', ROOMS_DATA[roomId].gameSettings)
+}
+
 function handlerDisconnect(socket: Socket) {
     console.log('A user disconnected id: ', socket.id);    
     const rooms: string[] = Object.keys(ROOMS_DATA);
     if (rooms.length == 0) return;
     const disconnectUser = findUserInRooms(rooms, socket.id)
     if (disconnectUser === null) return;
-
     deleteMemberFromRoom(disconnectUser?.roomId, disconnectUser?.index)
 }
-
