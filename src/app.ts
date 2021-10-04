@@ -1,6 +1,5 @@
 import express, { NextFunction, Response } from 'express';
 const cors = require('cors');
-// import socketio from 'socket.io';
 const socketio = require('socket.io');
 import authRouter from './routes/auth.routes'
 import http from 'http'

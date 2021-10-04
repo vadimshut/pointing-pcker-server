@@ -1,7 +1,6 @@
 import { Socket } from "socket.io";
 import { nsp } from "../app";
 import { ROOMS_DATA } from "../globalConstants";
-import IFindUser from "../interfaces/IFindUser";
 import IGameSettings from "../interfaces/IGameSettings";
 import IIssue from "../interfaces/IIssue";
 import IOpenModalKickPlayer from "../interfaces/IOpenModalKickPlayer";
@@ -30,11 +29,14 @@ export default function onConnectionSocket(socket: Socket) {
      socket.on('newIssue', (roomId, issueInstance) => {handlerNewIssue(socket, roomId, issueInstance)})
      socket.on('deleteIssueCard', (roomId, issueId) => {handdleDeleteIssueCard(socket, roomId, issueId)})
      socket.on('modifiedIssue', (roomId, issueId) => {handdleModifiedIssueCard(socket, roomId, issueId)})
-     socket.on('sendMessage', (message, roomId, firstName, lastName, jobPossition, image) => {
-        sendChatMessage(socket, message, roomId, firstName, lastName, jobPossition, image)
+     socket.on('sendMessage', (message, roomId, firstName, lastName, jobPossition, image, userId) => {
+        sendChatMessage(socket, message, roomId, firstName, lastName, jobPossition, image, userId)
      })
+     socket.on('getChatMessages', (roomId) => {handlerChatMessages(roomId)})
      socket.on('startGame', (roomId, startGame, gameSettings) => {handleStartGame(socket, roomId, startGame, gameSettings)})
      socket.on('getGameSettings', (roomId) => {handlerSendGameSettings(socket, roomId)})
+     socket.on('exitGameServer', (roomId) => {handleExitGameServer(socket, roomId)})
+     socket.on('cancelGameServer', (roomId) => {handleCancelGame(socket, roomId)}) //TODO
      socket.on('disconnect', () => handlerDisconnect(socket));
 }
 
@@ -48,19 +50,10 @@ function joinRoom(socket: Socket, roomId: string, userId: string) {
     const user = ROOMS_DATA[roomId]?.members.filter((member) => member.userId === userId)[0]
     user.socketId = socket.id
     console.log('new user join to room ', roomId);   
-    console.log(ROOMS_DATA[roomId]?.members);
-    // const room = nsp.sockets
-    // console.log(room.keys());
 }
 
-function handlerKickMeFromRoom(socket: Socket, roomId: string) {
-    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
-    socket.leave(roomId)
-    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
-}
 
 function getMembers(socket: Socket, roomId: string) {
-    console.log('Action members id: ', socket.id);
     const sendData = ROOMS_DATA[roomId]?.members
     nsp.to(roomId).emit('sendMembersToClient', {members: sendData})
 }
@@ -70,6 +63,7 @@ function addNewUser(socket: Socket, roomId: string, userId: string) {
     const newUser = ROOMS_DATA[roomId]?.members.filter(item => item.userId === userId)
     socket.to(roomId).emit('addNewUser', {user: newUser})
 }
+
 
 function openModalKickPlayer(
     socket: Socket, 
@@ -83,7 +77,6 @@ function openModalKickPlayer(
         kickMember: kickMember,
         kickMemberSocketId: kickMemberSocketId
     }
-    console.log('meber data: ', isKick, kickMember, kickMemberSocketId);
     socket.to(roomId).emit('modalKickPlayerClient', {data: sendData})
 }
 
@@ -92,9 +85,7 @@ function handlerResolutionKickMember(
     roomId: string, 
     kickMemberSocketId: string, 
     kickMemberResolution: boolean
-) {
-    console.log('kick member: ', socket.id);
-    
+) {    
     ROOMS_DATA[roomId].kickResolution?.push({
         roomId: roomId, 
         kickMemberSocketId: kickMemberSocketId, 
@@ -106,7 +97,6 @@ function handlerResolutionKickMember(
         const minCountAccept = Math.floor(ROOMS_DATA[roomId].members.length / 2) + 1
 
         if (premitDisconnect >= minCountAccept) {
-            console.log('kick this player', premitDisconnect, minCountAccept);
             const user = findUserInRoom(roomId, kickMemberSocketId)
             if (user !== undefined) {
                 deleteMemberFromRoom(user?.roomId, user?.index)
@@ -124,9 +114,14 @@ function handlerResolutionKickMember(
     }    
 }
 
+function handlerKickMeFromRoom(socket: Socket, roomId: string) {
+    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
+    socket.leave(roomId)
+    console.log(nsp.sockets.get(socket.id).adapter.rooms.get(roomId));
+}
+
 
 function handlerNewIssue(socket: Socket, roomId: string, issueInstance: IIssue) {
-    console.log('recieve new issue');
     ROOMS_DATA[roomId].issues.push(issueInstance)
     const issues = ROOMS_DATA[roomId].issues
     nsp.to(roomId).emit('issues', {issues: issues})
@@ -146,6 +141,7 @@ function handdleModifiedIssueCard(socket: Socket, roomId: string, issueInstance:
     nsp.to(roomId).emit('issues', {issues: issues})
 }
 
+
 function handleStartGame(socket: Socket, roomId: string, startGame: boolean, gameSettings: IGameSettings) {
     ROOMS_DATA[roomId].gameSettings = gameSettings
     nsp.to(roomId).emit('startGameClient', startGame)
@@ -155,6 +151,31 @@ function handlerSendGameSettings(socket: Socket, roomId: string) {
     nsp.to(roomId).emit('setGameSettings', ROOMS_DATA[roomId].gameSettings)
 }
 
+
+function handlerChatMessages(roomId: string) {
+    nsp.to(roomId).emit('newChatMessage', ROOMS_DATA[roomId].chat)
+}
+
+function handleCancelGame(socket: Socket, roomId: string) {
+    const rooms: string[] = Object.keys(ROOMS_DATA);
+    const disconnectUser = findUserInRooms(rooms, socket.id)
+    if (disconnectUser !== null) {
+        delete ROOMS_DATA[disconnectUser.roomId]
+        nsp.to(disconnectUser.roomId).emit('cancelGameClient') 
+    }
+}
+
+function handleExitGameServer(socket: Socket, roomId: string) {
+    const disconnectUser = findUserInRoom(roomId, socket.id)
+    if (disconnectUser !== undefined) {
+        deleteMemberFromRoom(roomId, disconnectUser?.index)
+        const sendData = ROOMS_DATA[disconnectUser.roomId]?.members
+        nsp.to(disconnectUser.roomId).emit('deleteMembers', {members: sendData})
+    }
+    nsp.to(roomId).emit('exitGameClient', {exit: true, socketId: socket.id}) 
+    socket.leave(roomId)
+}
+
 function handlerDisconnect(socket: Socket) {
     console.log('A user disconnected id: ', socket.id);    
     const rooms: string[] = Object.keys(ROOMS_DATA);
@@ -162,4 +183,12 @@ function handlerDisconnect(socket: Socket) {
     const disconnectUser = findUserInRooms(rooms, socket.id)
     if (disconnectUser === null) return;
     deleteMemberFromRoom(disconnectUser?.roomId, disconnectUser?.index)
+    if (!disconnectUser.user.isAdmin) {
+        const sendData = ROOMS_DATA[disconnectUser.roomId]?.members
+        nsp.to(disconnectUser.roomId).emit('deleteMembers', {members: sendData})
+    } 
+    if (disconnectUser.user.isAdmin) {
+        delete ROOMS_DATA[disconnectUser.roomId]
+        nsp.to(disconnectUser.roomId).emit('cancelGameClient', {exitGame: true}) //TODO
+    }
 }

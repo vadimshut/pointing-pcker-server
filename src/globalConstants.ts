@@ -12,6 +12,7 @@ interface IRoomData {
     issues: IIssue[]
     chat: IChat[]
     gameSettings: IGameSettings | {}
+    
 }
 
 interface IRoomsData {
