@@ -4,8 +4,8 @@
   "description": "server",
   "private": true,
   "scripts": {
-    "start": "ts-node ./src/app.ts",
-    "server": "nodemon"
+    "start": "ts-node src/index.js",
+    "server": "nodemon -x ts-node src/index.js"
   },
   "keywords": [
     "mongo",
