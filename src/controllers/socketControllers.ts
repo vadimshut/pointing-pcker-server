@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { nsp } from "../app";
+import { nsp } from "..";
 import { ROOMS_DATA } from "../globalConstants";
 import IGameSettings from "../interfaces/IGameSettings";
 import IIssue from "../interfaces/IIssue";
