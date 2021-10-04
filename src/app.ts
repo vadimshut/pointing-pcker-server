@@ -21,8 +21,8 @@ app.use('/api/auth', authRouter);
 nsp.on('connection',  onConnectionSocket)
 
 async function start() {
-    // app.listen(process.env.PORT || 3000, () => console.log(`App has been started on port ${process.env.PORT}... `));
-    server.listen(PORT, () => console.log(`App has been started on port ${PORT}...`));
+    app.listen(process.env.PORT || 3000, () => console.log(`App has been started on port ${process.env.PORT}... `));
+    // server.listen(PORT, () => console.log(`App has been started on port ${PORT}...`));
 }
 
 start();
